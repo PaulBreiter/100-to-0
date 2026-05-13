@@ -21,7 +21,6 @@
             background-image: radial-gradient(circle at 10% 20%, rgba(255, 0, 85, 0.05) 0%, transparent 40%);
         }
 
-        /* --- UI TOP (Status) --- */
         #ui-top { 
             position: sticky; top: 0; width: 100%; max-width: 600px; 
             padding: 20px; z-index: 1000; box-sizing: border-box; 
@@ -39,7 +38,6 @@
         #hp-bar-fill { height: 100%; background: var(--accent); width: 100%; transition: 0.5s; }
         .hp-text { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; color: var(--accent); line-height: 1; }
 
-        /* --- JOKER --- */
         .joker-row { display: flex; gap: 10px; margin-top: 15px; justify-content: center; }
         .joker-box { 
             background: #1a1c26; border: 1px solid #333; border-radius: 12px; 
@@ -49,7 +47,6 @@
         .joker-box.active { border-color: var(--blue); box-shadow: 0 0 15px var(--blue); transform: translateY(-3px); }
         .joker-box.used { opacity: 0.1; filter: grayscale(1); pointer-events: none; border-color: transparent; }
 
-        /* --- GRID (Responsive) --- */
         .grid { 
             display: grid; grid-template-columns: repeat(2, 1fr); 
             gap: 15px; width: 90%; max-width: 1000px; padding-bottom: 120px; margin-top: 20px;
@@ -57,38 +54,31 @@
         @media (min-width: 768px) { .grid { grid-template-columns: repeat(3, 1fr); } }
         @media (min-width: 1024px) { .grid { grid-template-columns: repeat(4, 1fr); } }
 
-        /* --- KARTEN & ZUSTÄNDE --- */
         .card { 
             background: var(--surface); border-radius: 16px; padding: 25px 10px; 
             border: 1px solid rgba(255,255,255,0.05); text-align: center; 
             transition: 0.3s; cursor: pointer; display: flex; flex-direction: column;
             align-items: center; justify-content: center; min-height: 110px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
         .card:hover:not(.disabled) { border-color: var(--blue); transform: translateY(-5px); background: #161925; }
-        
-        .card.disabled {
-            opacity: 0.3; filter: grayscale(1); cursor: not-allowed;
-            background: rgba(0,0,0,0.2) !important; border-color: transparent !important;
-        }
+        .card.disabled { opacity: 0.3; filter: grayscale(1); cursor: not-allowed; background: rgba(0,0,0,0.2) !important; border-color: transparent !important; }
 
         .card-label { font-family: 'Orbitron'; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
         .card-count { font-size: 0.6rem; color: #666; margin-top: 8px; font-family: 'Orbitron'; }
 
-        /* --- MODALS --- */
         .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-2 { background: var(--surface); width: 85%; max-width: 450px; padding: 35px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
+        .modal-2 { background: var(--surface); width: 85%; max-width: 450px; padding: 35px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); text-align: center; max-height: 80vh; overflow-y: auto; }
         .btn-confirm { background: var(--accent); color: #fff; border: none; width: 100%; padding: 18px; border-radius: 15px; font-weight: 700; margin-top: 15px; cursor: pointer; font-family: 'Orbitron'; }
         
         footer { position: fixed; bottom: 20px; width: 95%; max-width: 600px; display: flex; gap: 8px; }
         .btn-nav { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #999; font-size: 0.7rem; cursor: pointer; font-weight: 700; text-transform: uppercase; }
         
         input { background: #000; border: 2px solid #333; color: var(--blue); padding: 15px; border-radius: 12px; width: 85%; text-align: center; font-family: 'Orbitron'; font-size: 1.2rem; outline: none; }
+        .score-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #222; font-family: 'Orbitron'; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
-    <!-- ANLEITUNG -->
     <div id="modal-guide" class="overlay">
         <div class="modal-2">
             <h2 style="color: var(--gold); font-family: 'Orbitron';">MISSION BRIEFING</h2>
@@ -96,13 +86,12 @@
                 <p>• <b>Ziel:</b> Absolviere 20 Sektoren ohne HP-Verlust.</p>
                 <p>• <b>Limits:</b> Jede Kategorie ist nur 2x anwählbar.</p>
                 <p>• <b>Bosse:</b> Jede 4. Frage ist eine Boss-Mission.</p>
-                <p>• <b>Joker:</b> Einmalig nutzbar. Halten Schaden ab oder heilen.</p>
+                <p>• <b>Joker:</b> Einmalig nutzbar.</p>
             </div>
             <button class="btn-confirm" onclick="toggleModal('modal-guide', false)">VERSTANDEN</button>
         </div>
     </div>
 
-    <!-- LOGIN -->
     <div id="modal-login" class="overlay" style="display: flex;">
         <div class="modal-2">
             <h2 style="color: var(--blue); font-family: 'Orbitron';">IDENTITY CHECK</h2>
@@ -134,7 +123,6 @@
 
     <div class="grid" id="game-grid"></div>
 
-    <!-- QUIZ MODAL -->
     <div id="modal-quiz" class="overlay"><div class="modal-2">
         <div id="m-cat-ui" style="color: var(--blue); font-size: 0.75rem; letter-spacing: 2px; font-family: 'Orbitron';">KATEGORIE</div>
         <div id="m-q" style="font-size: 1.3rem; margin: 25px 0;">Lade...</div>
@@ -144,14 +132,18 @@
         <button id="btn-next" style="display:none; background: var(--green); color: #000;" class="btn-confirm" onclick="nextRound()">WEITER</button>
     </div></div>
 
-    <!-- GAME OVER / WIN -->
+    <div id="modal-ranking" class="overlay"><div class="modal-2">
+        <h2 style="color: var(--gold); font-family: 'Orbitron';">HALL OF FAME</h2>
+        <div id="ranking-list" style="margin: 20px 0;"></div>
+        <button class="btn-confirm" onclick="toggleModal('modal-ranking', false)">ZURÜCK</button>
+    </div></div>
+
     <div id="modal-gameover" class="overlay"><div class="modal-2">
         <h2 id="go-title" style="color: var(--accent); font-family: 'Orbitron';">MISSION ENDE</h2>
         <p id="go-text" style="font-size: 1.1rem; margin: 20px 0;"></p>
         <button class="btn-confirm" onclick="location.reload()">NEUSTART</button>
     </div></div>
 
-    <!-- SETUP / EXCEL -->
     <div id="modal-setup" class="overlay"><div class="modal-2">
         <h2 style="color: var(--blue); font-family: 'Orbitron';">DATA UPLOAD</h2>
         <input type="file" id="excel-file" accept=".xlsx, .xls">
@@ -161,6 +153,7 @@
 
     <footer>
         <button class="btn-nav" onclick="toggleModal('modal-guide', true)">ANLEITUNG</button>
+        <button class="btn-nav" onclick="showRanking()">HIGHSCORE</button>
         <button class="btn-nav" onclick="toggleModal('modal-setup', true)">UPLOAD</button>
     </footer>
 
@@ -183,6 +176,13 @@
             renderBoard();
         }
 
+        async function showRanking() {
+            toggleModal('modal-ranking', true);
+            const { data, error } = await supabaseClient.from('highscores').select('*').order('score', { ascending: false }).limit(10);
+            const list = document.getElementById('ranking-list');
+            list.innerHTML = error ? "Verbindung fehlgeschlagen" : data.map((s, i) => `<div class="score-row"><span>${i+1}. ${s.name}</span><span style="color:var(--green)">${s.score}</span></div>`).join('');
+        }
+
         function processExcel() {
             const file = document.getElementById('excel-file').files[0];
             const reader = new FileReader();
@@ -200,20 +200,13 @@
         function renderBoard() {
             const grid = document.getElementById('game-grid');
             grid.innerHTML = "";
-            
             const nextQuestionNumber = qCounter + 1;
             const isBossTurn = (nextQuestionNumber % 4 === 0) || (nextQuestionNumber === 20);
 
             if (isBossTurn) {
                 const card = document.createElement('div');
-                card.className = "card";
-                card.style.gridColumn = "1 / -1";
-                card.style.borderColor = "var(--gold)";
-                card.style.background = "rgba(255,204,0,0.1)";
-                card.innerHTML = `
-                    <div class="card-label" style="color: var(--gold); font-size: 1.5rem;">⚠️ BOSS SEKTOR ⚠️</div>
-                    <div class="card-count">LEVEL ${nextQuestionNumber} / 20</div>
-                `;
+                card.className = "card"; card.style.gridColumn = "1 / -1"; card.style.borderColor = "var(--gold)"; card.style.background = "rgba(255,204,0,0.1)";
+                card.innerHTML = `<div class="card-label" style="color: var(--gold); font-size: 1.5rem;">⚠️ BOSS SEKTOR ⚠️</div><div class="card-count">LEVEL ${nextQuestionNumber} / 20</div>`;
                 card.onclick = () => startBossQuestion();
                 grid.appendChild(card);
             } else {
@@ -221,7 +214,6 @@
                 allCats.forEach(cat => {
                     const usedCount = categoryUsage[cat] || 0;
                     const card = document.createElement('div');
-                    
                     if (usedCount >= 2) {
                         card.className = "card disabled";
                         card.innerHTML = `<div class="card-label">${cat}</div><div class="card-count" style="color:var(--accent)">LIMIT ERREICHT</div>`;
@@ -281,33 +273,20 @@
             const q = questions[currentIdx];
             const guess = parseInt(document.getElementById('ans-input').value);
             if(isNaN(guess)) return;
-
             let diff = Math.abs(guess - q.a);
             if(activeJoker === 'Schild' && diff > 10) diff = 10;
             if(activeJoker === 'Trank') diff = Math.floor(diff / 2);
-            
             if(diff === 0) {
                 let gain = (activeJoker === 'Schwert') ? 20 : 10;
-                hp = Math.min(100, hp + gain);
-                score += q.isBoss ? 500 : 200;
+                hp = Math.min(100, hp + gain); score += q.isBoss ? 500 : 200;
                 document.getElementById('m-feedback').innerHTML = `<span style="color:var(--green)">TREFFER! +${gain} HP</span>`;
             } else {
-                hp -= diff;
-                score += Math.max(0, (q.isBoss ? 100 : 50) - diff);
+                hp -= diff; score += Math.max(0, (q.isBoss ? 100 : 50) - diff);
                 document.getElementById('m-feedback').innerHTML = `<span style="color:var(--accent)">-${diff} HP (Lösung: ${q.a})</span>`;
             }
-
-            if(activeJoker) { 
-                usedJokers[activeJoker] = true; 
-                document.getElementById('j-'+activeJoker).classList.add('used'); 
-                document.getElementById('j-'+activeJoker).classList.remove('active');
-                activeJoker = null; 
-            }
-
-            q.used = true;
-            qCounter++;
-            document.getElementById('btn-submit').style.display = 'none';
-            document.getElementById('btn-next').style.display = 'block';
+            if(activeJoker) { usedJokers[activeJoker] = true; document.getElementById('j-'+activeJoker).classList.add('used'); document.getElementById('j-'+activeJoker).classList.remove('active'); activeJoker = null; }
+            q.used = true; qCounter++;
+            document.getElementById('btn-submit').style.display = 'none'; document.getElementById('btn-next').style.display = 'block';
             updateUI();
         }
 
@@ -320,7 +299,7 @@
 
         function nextRound() {
             toggleModal('modal-quiz', false);
-            if(hp <= 0) endGame("MISSION FAILED", "System kritisch beschädigt.");
+            if(hp <= 0) endGame("MISSION FAILED", "System kritisch.");
             else if(qCounter >= 20) endGame("MISSION ERFOLGREICH", "Alle Sektoren gesichert!");
             else renderBoard();
         }
