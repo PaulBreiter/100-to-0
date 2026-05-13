@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>POINT ZERO</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --bg: #05050a; --card: #111a32; --accent: #e94560; --text: #e0e0e0; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; touch-action: manipulation; }
+        
+        /* Admin Button dezent oben */
+        #admin-trigger { opacity: 0.3; font-size: 0.7rem; position: absolute; top: 5px; right: 5px; background: none; border: 1px solid #444; color: #fff; padding: 2px 5px; width: auto; }
+        #admin-panel { display: none; background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; width: 100%; box-sizing: border-box; }
+
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        .shake { animation: shake 0.3s ease-in-out; }
+
+        #stat-header { position: sticky; top: 10px; width: 100%; max-width: 600px; background: rgba(17, 26, 50, 0.9); padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 100; border: 1px solid #333; box-sizing: border-box; }
+        .hp-val { font-size: 1.8rem; font-weight: bold; color: var(--accent); }
+
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; max-width: 600px; margin-top: 20px; }
+        .card { background: var(--card); padding: 25px 10px; text-align: center; border-radius: 10px; border-left: 6px solid #555; transition: 0.2s; font-weight: bold; font-size: 0.9rem; }
+        .card.used { opacity: 0.1; pointer-events: none; }
+
+        #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--card); padding: 30px; border-radius: 20px; text-align: center; width: 90%; max-width: 400px; border: 1px solid #444; }
+
+        input { background: #000; color: #fff; border: 1px solid #444; padding: 12px; font-size: 1.2rem; width: 100px; text-align: center; border-radius: 8px; margin: 10px; }
+        button { cursor: pointer; padding: 12px 20px; border: none; border-radius: 8px; background: var(--accent); color: white; font-weight: bold; width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body id="game-body">
+
+    <button id="admin-trigger" onclick="document.getElementById('admin-panel').style.display='block'">Setup</button>
+
+    <div id="admin-panel">
+        <h4 style="margin-top:0">Excel Import</h4>
+        <input type="file" id="excel-file" accept=".xlsx, .xls" style="width: auto; font-size: 0.8rem;">
+        <button onclick="importExcel()" style="width: auto;">Datei Laden</button>
+        <button onclick="document.getElementById('admin-panel').style.display='none'" style="background:#444; width: auto;">Schließen</button>
+    </div>
+
+    <div id="stat-header">
+        <div><small>HP</small><br><span id="hp-display" class="hp-val">100</span></div>
+        <div style="text-align:center"><small>BOSS IN</small><br><span id="boss-timer">4</span></div>
+        <div id="joker-box"><button onclick="useJoker()" id="j-btn" style="width:auto; padding: 5px 10px; background:#1a1a2e; border:1px solid #444;">🛡️</button></div>
+    </div>
+
+    <div class="grid" id="game-grid"></div>
+
+    <div id="modal">
+        <div class="modal-content">
+            <h3 id="m-cat">KATEGORIE</h3>
+            <p id="m-q"></p>
+            <input type="number" id="ans1" placeholder="?">
+            <button onclick="checkAnswer()">BESTÄTIGEN</button>
+            <div id="m-feedback" style="margin-top:15px; font-weight:bold;"></div>
+            <button id="btn-next" style="display:none; background:#2d5a27" onclick="closeModal()">WEITER</button>
+        </div>
+    </div>
+
+    <script>
+        let audioCtx;
+        function playSound(type) {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = type === 'hit' ? 'sawtooth' : 'sine';
+            osc.frequency.setValueAtTime(type === 'hit' ? 100 : 400, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        let questions = JSON.parse(localStorage.getItem('p0_mobile')) || [];
+        let hp = 100, counter = 0, currentIdx = null, shieldActive = false;
+
+        function importExcel() {
+            const file = document.getElementById('excel-file').files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const wb = XLSX.read(data, {type: 'array'});
+                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                questions = json.map(r => ({ cat: r.Kategorie || "Allgemein", q: r.Frage, a: parseInt(r.Antwort), type: (r.Boss || "").toLowerCase(), used: false }));
+                localStorage.setItem('p0_mobile', JSON.stringify(questions));
+                alert("Geladen!"); location.reload();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function renderBoard() {
+            const grid = document.getElementById('game-grid');
+            grid.innerHTML = "";
+            if(questions.length === 0) { grid.innerHTML = "<p style='grid-column: 1/3; text-align:center;'>Bitte Excel über 'Setup' laden!</p>"; return; }
+            
+            const cats = [...new Set(questions.filter(q => q.type !== 'ja' && q.type !== 'endboss').map(q => q.cat))];
+            cats.forEach(cat => {
+                const open = questions.filter(q => q.cat === cat && !q.used && q.type !== 'ja');
+                const card = document.createElement('div');
+                card.className = `card ${open.length === 0 ? 'used' : ''}`;
+                card.innerHTML = `${cat}<br><small>${open.length} übrig</small>`;
+                if(open.length > 0) card.onclick = () => {
+                    const pool = open;
+                    const q = pool[Math.floor(Math.random()*pool.length)];
+                    currentIdx = questions.indexOf(q);
+                    openQuestion(q);
+                };
+                grid.appendChild(card);
+            });
+            document.getElementById('hp-display').innerText = hp;
+            document.getElementById('boss-timer').innerText = (4 - counter);
+        }
+
+        function openQuestion(q) {
+            document.getElementById('m-cat').innerText = q.cat;
+            document.getElementById('m-q').innerText = q.q;
+            document.getElementById('modal').style.display = 'flex';
+            document.getElementById('btn-next').style.display = 'none';
+            document.getElementById('m-feedback').innerText = "";
+            document.getElementById('ans1').value = "";
+        }
+
+        function checkAnswer() {
+            const q = questions[currentIdx];
+            const val = parseInt(document.getElementById('ans1').value);
+            let diff = Math.abs(val - q.a);
+            if(shieldActive && diff > 10) { diff = 10; shieldActive = false; document.getElementById('j-btn').style.borderColor = "#444"; }
+
+            if(diff === 0) { playSound('win'); hp += 5; } 
+            else { 
+                playSound('hit'); hp -= diff; 
+                document.getElementById('game-body').classList.add('shake');
+                setTimeout(() => document.getElementById('game-body').classList.remove('shake'), 300);
+            }
+            q.used = true; counter++;
+            document.getElementById('m-feedback').innerText = `Lösung: ${q.a} (${diff === 0 ? '+5 HP' : '-' + diff + ' HP'})`;
+            document.getElementById('btn-next').style.display = 'block';
+            document.getElementById('hp-display').innerText = hp;
+        }
+
+        function useJoker() { shieldActive = true; document.getElementById('j-btn').style.borderColor = "gold"; }
+        function closeModal() { document.getElementById('modal').style.display = 'none'; renderBoard(); }
+
+        renderBoard();
+    </script>
+</body>
+</html>
