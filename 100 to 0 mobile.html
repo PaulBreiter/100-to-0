@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>POINT ZERO - Mobile Quiz</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { 
+            --bg: #05050a; --card: #111a32; --accent: #e94560; --boss: #b8860b; --text: #e0e0e0; 
+        }
+
+        body { 
+            font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); 
+            margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center;
+            touch-action: manipulation; /* Optimiert für Mobile-Taps */
+        }
+
+        /* Animationen */
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        .shake { animation: shake 0.3s ease-in-out; }
+
+        #stat-header { 
+            position: sticky; top: 10px; width: 100%; max-width: 600px;
+            background: rgba(17, 26, 50, 0.9); padding: 15px; border-radius: 12px;
+            display: flex; justify-content: space-between; align-items: center; z-index: 100;
+            box-sizing: border-box; border: 1px solid #333;
+        }
+
+        .hp-val { font-size: 1.8rem; font-weight: bold; color: var(--accent); }
+
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; max-width: 600px; margin-top: 20px; }
+        .card { 
+            background: var(--card); padding: 25px 10px; text-align: center; border-radius: 10px; 
+            border-left: 6px solid #555; transition: 0.2s; font-weight: bold; font-size: 0.9rem;
+        }
+        .card:active { transform: scale(0.95); opacity: 0.8; }
+        .card.used { opacity: 0.1; pointer-events: none; }
+
+        #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--card); padding: 30px; border-radius: 20px; text-align: center; width: 90%; max-width: 400px; border: 1px solid #444; }
+
+        input { background: #000; color: #fff; border: 1px solid #444; padding: 12px; font-size: 1.2rem; width: 100px; text-align: center; border-radius: 8px; margin: 10px; }
+        button { cursor: pointer; padding: 12px 20px; border: none; border-radius: 8px; background: var(--accent); color: white; font-weight: bold; width: 100%; }
+        
+        .joker-btn { background: #1a1a2e; border: 1px solid #444; width: auto; margin: 5px; font-size: 1.2rem; }
+        .joker-active { border-color: gold; box-shadow: 0 0 10px gold; }
+    </style>
+</head>
+<body id="game-body">
+
+    <div id="stat-header">
+        <div><small>HP</small><br><span id="hp-display" class="hp-val">100</span></div>
+        <div style="text-align:center"><small>BOSS IN</small><br><span id="boss-timer">4</span></div>
+        <div>
+            <button class="joker-btn" id="j-Schild" onclick="toggleJoker('Schild')">🛡️</button>
+        </div>
+    </div>
+
+    <div class="grid" id="game-grid"></div>
+
+    <div id="modal">
+        <div class="modal-content">
+            <h3 id="m-cat" style="margin-top:0">KATEGORIE</h3>
+            <p id="m-q" style="min-height: 60px;"></p>
+            <input type="number" id="ans1" placeholder="?">
+            <button onclick="checkAnswer()">ANTWORTEN</button>
+            <div id="m-feedback" style="margin-top:15px; font-weight:bold;"></div>
+            <button id="btn-next" style="display:none; background:#2d5a27; margin-top:10px;" onclick="closeModal()">WEITER</button>
+        </div>
+    </div>
+
+    <script>
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function playSound(type) {
+            if(!audioCtx) audioCtx = new AudioCtx();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            
+            if(type === 'hit') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            } else {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            }
+            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        }
+
+        let questions = JSON.parse(localStorage.getItem('pointZeroMobile')) || [];
+        let hp = 100, counter = 0, currentIdx = null, activeJoker = null;
+
+        function renderBoard() {
+            const grid = document.getElementById('game-grid');
+            grid.innerHTML = "";
+            const normalQs = questions.filter(q => q.type !== 'ja' && q.type !== 'endboss');
+            const categories = [...new Set(normalQs.map(q => q.cat))];
+
+            categories.forEach(cat => {
+                const open = normalQs.filter(q => q.cat === cat && !q.used);
+                const card = document.createElement('div');
+                card.className = `card ${open.length === 0 ? 'used' : ''}`;
+                card.innerHTML = `${cat}<br><small style="opacity:0.5; font-weight:normal">${open.length} Fragen</small>`;
+                if(open.length > 0) card.onclick = () => {
+                    const q = open[Math.floor(Math.random()*open.length)];
+                    currentIdx = questions.indexOf(q);
+                    openQuestion(q);
+                };
+                grid.appendChild(card);
+            });
+            document.getElementById('hp-display').innerText = hp;
+            document.getElementById('boss-timer').innerText = (4 - counter);
+        }
+
+        function openQuestion(q) {
+            document.getElementById('m-cat').innerText = q.cat;
+            document.getElementById('m-q').innerText = q.q;
+            document.getElementById('modal').style.display = 'flex';
+            document.getElementById('btn-next').style.display = 'none';
+            document.getElementById('m-feedback').innerText = "";
+            document.getElementById('ans1').value = "";
+        }
+
+        function checkAnswer() {
+            const q = questions[currentIdx];
+            const guess = parseInt(document.getElementById('ans1').value);
+            let diff = Math.abs(guess - q.a);
+            
+            if(activeJoker === 'Schild' && diff > 10) diff = 10;
+
+            if(diff === 0) {
+                playSound('win');
+                document.getElementById('m-feedback').innerHTML = "<span style='color:gold'>VOLTREFFER!</span>";
+            } else {
+                playSound('hit');
+                document.getElementById('game-body').classList.add('shake');
+                setTimeout(() => document.getElementById('game-body').classList.remove('shake'), 300);
+                hp -= diff;
+                document.getElementById('m-feedback').innerHTML = `Lösung: ${q.a} (-${diff} HP)`;
+            }
+
+            q.used = true;
+            counter++;
+            document.getElementById('hp-display').innerText = hp;
+            document.getElementById('btn-next').style.display = 'block';
+            localStorage.setItem('pointZeroMobile', JSON.stringify(questions));
+        }
+
+        function toggleJoker(t) {
+            activeJoker = (activeJoker === t) ? null : t;
+            document.getElementById('j-Schild').classList.toggle('joker-active', activeJoker === 'Schild');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            if(hp <= 0) { alert("Game Over!"); location.reload(); }
+            renderBoard();
+        }
+
+        // Beispiel-Daten falls Speicher leer
+        if(questions.length === 0) {
+            questions = [{cat: "Test", q: "Wie viel ist 5+5?", a: 10, type: ""}];
+        }
+
+        renderBoard();
+    </script>
+</body>
+</html>
