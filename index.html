@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>POINT ZERO 2.3</title>
+    <title>POINT ZERO 2.4 | Responsive</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -21,107 +21,153 @@
             background-image: radial-gradient(circle at 10% 20%, rgba(255, 0, 85, 0.05) 0%, transparent 40%);
         }
 
-        #ui-top { position: sticky; top: 0; width: 100%; max-width: 500px; padding: 20px; z-index: 1000; box-sizing: border-box; background: linear-gradient(to bottom, var(--bg) 80%, transparent); }
-        .status-container { background: var(--surface); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        /* --- UI TOP (Status) --- */
+        #ui-top { 
+            position: sticky; top: 0; width: 100%; max-width: 600px; 
+            padding: 20px; z-index: 1000; box-sizing: border-box; 
+            background: linear-gradient(to bottom, var(--bg) 80%, transparent); 
+        }
+        
+        .status-container { 
+            background: var(--surface); border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 20px; padding: 15px; display: flex; 
+            justify-content: space-between; align-items: center; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+        }
+        
         .hp-bar-bg { height: 6px; background: #222; border-radius: 3px; margin-top: 8px; overflow: hidden; }
         #hp-bar-fill { height: 100%; background: var(--accent); width: 100%; transition: 0.5s; }
         .hp-text { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; color: var(--accent); line-height: 1; }
 
+        /* --- JOKER --- */
         .joker-row { display: flex; gap: 10px; margin-top: 15px; justify-content: center; }
-        .joker-box { background: #1a1c26; border: 1px solid #333; border-radius: 12px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; cursor: pointer; transition: 0.3s; }
+        .joker-box { 
+            background: #1a1c26; border: 1px solid #333; border-radius: 12px; 
+            width: 50px; height: 50px; display: flex; align-items: center; 
+            justify-content: center; font-size: 1.3rem; cursor: pointer; transition: 0.3s; 
+        }
         .joker-box.active { border-color: var(--blue); box-shadow: 0 0 15px var(--blue); transform: translateY(-3px); }
         .joker-box.used { opacity: 0.1; filter: grayscale(1); pointer-events: none; }
 
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 90%; max-width: 500px; padding-bottom: 120px; }
-        .card { background: var(--surface); border-radius: 16px; padding: 30px 10px; border: 1px solid rgba(255,255,255,0.05); text-align: center; transition: 0.2s; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 80px; }
-        .card:active { transform: scale(0.95); }
-        .card-label { font-family: 'Orbitron'; font-size: 0.85rem; color: var(--text); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        /* --- GRID (Spalten-Logik) --- */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); /* Standard: 2 Spalten (Handy) */
+            gap: 15px; width: 90%; max-width: 1000px; padding-bottom: 120px; 
+            margin-top: 20px;
+        }
 
+        /* Laptop / Desktop Anpassung */
+        @media (min-width: 768px) {
+            .grid { grid-template-columns: repeat(3, 1fr); gap: 20px; } /* Tablet: 3 Spalten */
+            #ui-top { max-width: 800px; }
+        }
+
+        @media (min-width: 1024px) {
+            .grid { grid-template-columns: repeat(4, 1fr); } /* Laptop: 4 Spalten */
+        }
+
+        /* --- KARTEN --- */
+        .card { 
+            background: var(--surface); border-radius: 16px; padding: 25px 10px; 
+            border: 1px solid rgba(255,255,255,0.05); text-align: center; 
+            transition: 0.3s; cursor: pointer; display: flex; 
+            align-items: center; justify-content: center; min-height: 100px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .card:hover { border-color: var(--blue); transform: translateY(-5px); background: #161925; }
+        .card:active { transform: scale(0.95); }
+        .card-label { 
+            font-family: 'Orbitron'; font-size: 0.8rem; color: var(--text); 
+            font-weight: 700; text-transform: uppercase; letter-spacing: 1px; 
+        }
+
+        /* --- MODALS --- */
         .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-2 { background: var(--surface); width: 85%; max-width: 400px; padding: 30px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); text-align: center; max-height: 80vh; overflow-y: auto; }
-        .btn-confirm { background: var(--accent); color: #fff; border: none; width: 100%; padding: 18px; border-radius: 15px; font-weight: 700; margin-top: 15px; cursor: pointer; font-family: 'Orbitron'; }
-        
-        footer { position: fixed; bottom: 20px; width: 90%; max-width: 450px; display: flex; gap: 8px; }
-        .btn-nav { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #999; font-size: 0.65rem; cursor: pointer; font-weight: 700; text-transform: uppercase; }
+        .modal-2 { background: var(--surface); width: 85%; max-width: 450px; padding: 35px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); text-align: center; max-height: 85vh; overflow-y: auto; }
+        .btn-confirm { background: var(--accent); color: #fff; border: none; width: 100%; padding: 18px; border-radius: 15px; font-weight: 700; margin-top: 15px; cursor: pointer; font-family: 'Orbitron'; transition: 0.2s; }
+        .btn-confirm:hover { filter: brightness(1.2); }
+
+        /* --- FOOTER --- */
+        footer { position: fixed; bottom: 20px; width: 95%; max-width: 600px; display: flex; gap: 8px; }
+        .btn-nav { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #999; font-size: 0.7rem; cursor: pointer; font-weight: 700; text-transform: uppercase; }
         
         input { background: #000; border: 2px solid #333; color: var(--blue); padding: 15px; border-radius: 12px; width: 85%; text-align: center; font-family: 'Orbitron'; font-size: 1.2rem; outline: none; }
-        .guide-text { text-align: left; font-size: 0.9rem; line-height: 1.5; color: #bbb; }
+        .score-row { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'Orbitron'; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-    <!-- ANLEITUNG MODAL -->
+    <!-- MODALS (Logik bleibt gleich) -->
     <div id="modal-guide" class="overlay">
         <div class="modal-2">
             <h2 style="color: var(--gold); font-family: 'Orbitron';">MISSION BRIEFING</h2>
-            <div class="guide-text">
-                <p><b>Ziel:</b> Erreiche den höchsten Score, ohne dass deine HP auf 0 fallen.</p>
-                <p><b>Ablauf:</b> Wähle einen Sektor. Beantworte die Schätzfrage. Je näher du dran bist, desto weniger Schaden nimmst du. Ein Volltreffer heilt dich!</p>
-                <p><b>Joker:</b><br>
-                🛡️ <b>Schild:</b> Begrenzt Schaden auf max. 10.<br>
-                ⚔️ <b>Schwert:</b> Verdoppelt Heilung bei Volltreffer.<br>
-                🧪 <b>Trank:</b> Halbiert den erlittenen Schaden.</p>
+            <div style="text-align: left; font-size: 0.95rem; line-height: 1.6; color: #bbb;">
+                <p>🚀 <b>Ziel:</b> Schätze so genau wie möglich, um deine HP zu bewahren.</p>
+                <p>🛡️ <b>Schild:</b> Deckelt den Schaden auf 10 Punkte.</p>
+                <p>⚔️ <b>Schwert:</b> Heilt +15 HP bei einem Volltreffer.</p>
+                <p>🧪 <b>Trank:</b> Halbiert den Schaden einer falschen Antwort.</p>
             </div>
-            <button class="btn-confirm" onclick="toggleModal('modal-guide', false)">VERSTANDEN</button>
+            <button class="btn-confirm" onclick="toggleModal('modal-guide', false)">START</button>
         </div>
     </div>
 
-    <!-- LOGIN MODAL -->
     <div id="modal-login" class="overlay" style="display: flex;">
         <div class="modal-2">
             <h2 style="color: var(--blue); font-family: 'Orbitron';">IDENTITY CHECK</h2>
             <input type="text" id="username" placeholder="PILOT NAME">
-            <button class="btn-confirm" onclick="initSession()">SYSTEM START</button>
+            <button class="btn-confirm" onclick="initSession()">EINLOGGEN</button>
         </div>
     </div>
 
     <div id="ui-top">
         <div class="status-container">
-            <div class="hp-section" style="flex-grow: 1;">
-                <div style="font-size: 0.6rem; color: #666; margin-bottom: 4px;">HP | SCORE: <span id="current-score" style="color:var(--green)">0</span></div>
+            <div style="flex-grow: 1;">
+                <div style="font-size: 0.65rem; color: #666; margin-bottom: 4px; letter-spacing: 1px;">HP | SCORE: <span id="current-score" style="color:var(--green)">0</span></div>
                 <div class="hp-text" id="hp-val">100</div>
                 <div class="hp-bar-bg"><div id="hp-bar-fill"></div></div>
             </div>
             <div style="text-align: center; margin-left: 20px;">
-                <div style="font-size: 0.6rem; color: #666;">BOSS</div>
-                <div id="boss-circle" style="border: 2px solid var(--gold); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: var(--gold); font-family: 'Orbitron'; font-weight: bold;">4</div>
+                <div style="font-size: 0.65rem; color: #666; letter-spacing: 1px;">BOSS</div>
+                <div id="boss-circle" style="border: 2px solid var(--gold); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; color: var(--gold); font-family: 'Orbitron'; font-weight: bold; font-size: 1.2rem;">4</div>
             </div>
         </div>
         <div class="joker-row">
-            <div class="joker-box" id="j-Schild" onclick="useJoker('Schild')">🛡️</div>
-            <div class="joker-box" id="j-Schwert" onclick="useJoker('Schwert')">⚔️</div>
-            <div class="joker-box" id="j-Trank" onclick="useJoker('Trank')">🧪</div>
+            <div class="joker-box" id="j-Schild" onclick="useJoker('Schild')" title="Schild">🛡️</div>
+            <div class="joker-box" id="j-Schwert" onclick="useJoker('Schwert')" title="Schwert">⚔️</div>
+            <div class="joker-box" id="j-Trank" onclick="useJoker('Trank')" title="Trank">🧪</div>
         </div>
     </div>
 
     <div class="grid" id="game-grid"></div>
 
-    <!-- WEITERE MODALS -->
+    <!-- FUNKTIONS-MODALS -->
     <div id="modal-quiz" class="overlay"><div class="modal-2">
-        <div id="m-cat-ui" style="color: var(--blue); font-size: 0.7rem; letter-spacing: 2px;">KATEGORIE</div>
-        <div id="m-q" style="font-size: 1.2rem; margin: 20px 0;">Lade...</div>
-        <input type="number" id="ans-input" inputmode="numeric">
-        <button class="btn-confirm" onclick="checkAnswer()">SENDEN</button>
-        <div id="m-feedback" style="margin-top: 15px; font-weight: 700;"></div>
-        <button id="btn-next" style="display:none; background: var(--green); color: #000;" class="btn-confirm" onclick="nextRound()">WEITER</button>
+        <div id="m-cat-ui" style="color: var(--blue); font-size: 0.75rem; letter-spacing: 2px; font-family: 'Orbitron';">KATEGORIE</div>
+        <div id="m-q" style="font-size: 1.3rem; margin: 25px 0; font-weight: 500;">Lade...</div>
+        <input type="number" id="ans-input" inputmode="numeric" placeholder="Deine Schätzung">
+        <button class="btn-confirm" onclick="checkAnswer()">DATEN ÜBERMITTELN</button>
+        <div id="m-feedback" style="margin-top: 15px; font-weight: 700; font-family: 'Orbitron';"></div>
+        <button id="btn-next" style="display:none; background: var(--green); color: #000;" class="btn-confirm" onclick="nextRound()">NÄCHSTE RUNDE</button>
     </div></div>
 
     <div id="modal-ranking" class="overlay"><div class="modal-2">
-        <h2 style="color: var(--gold); font-family: 'Orbitron';">TOP PILOTEN</h2>
-        <div id="ranking-list"></div>
+        <h2 style="color: var(--gold); font-family: 'Orbitron';">HALL OF FAME</h2>
+        <div id="ranking-list" style="margin: 20px 0;"></div>
         <button class="btn-confirm" onclick="toggleModal('modal-ranking', false)">ZURÜCK</button>
     </div></div>
 
     <div id="modal-gameover" class="overlay"><div class="modal-2">
-        <h2 id="go-title" style="color: var(--accent); font-family: 'Orbitron';">GAME OVER</h2>
-        <p id="go-text"></p>
-        <button class="btn-confirm" onclick="restartGame()">RETRY</button>
-        <button class="btn-nav" style="width:100%; margin-top:10px;" onclick="location.reload()">MENÜ</button>
+        <h2 id="go-title" style="color: var(--accent); font-family: 'Orbitron';">MISSION ENDE</h2>
+        <p id="go-text" style="font-size: 1.1rem; margin: 20px 0;"></p>
+        <button class="btn-confirm" onclick="restartGame()">NEUSTART</button>
+        <button class="btn-nav" style="width:100%; margin-top:10px;" onclick="location.reload()">HAUPTMENÜ</button>
     </div></div>
 
     <div id="modal-setup" class="overlay"><div class="modal-2">
-        <input type="file" id="excel-file" accept=".xlsx, .xls">
-        <button class="btn-confirm" onclick="processExcel()">UPLOAD EXCEL</button>
+        <h2 style="color: var(--blue); font-family: 'Orbitron';">DATA UPLOAD</h2>
+        <input type="file" id="excel-file" accept=".xlsx, .xls" style="font-size: 0.8rem; border: none;">
+        <button class="btn-confirm" onclick="processExcel()">EXCEL IMPORTIEREN</button>
         <button class="btn-nav" style="width:100%; margin-top:10px;" onclick="toggleModal('modal-setup', false)">ABBRECHEN</button>
     </div></div>
 
@@ -152,7 +198,7 @@
             toggleModal('modal-ranking', true);
             const { data, error } = await supabaseClient.from('highscores').select('*').order('score', { ascending: false }).limit(10);
             const list = document.getElementById('ranking-list');
-            list.innerHTML = error ? "Fehler!" : data.map((s, i) => `<div class="score-row"><span>${i+1}. ${s.name}</span><span style="color:var(--green)">${s.score}</span></div>`).join('');
+            list.innerHTML = error ? "Verbindung fehlgeschlagen" : data.map((s, i) => `<div class="score-row"><span>${i+1}. ${s.name}</span><span style="color:var(--green)">${s.score}</span></div>`).join('');
         }
 
         function restartGame() {
@@ -171,7 +217,7 @@
                 const data = new Uint8Array(e.target.result);
                 const wb = XLSX.read(data, {type: 'array'});
                 const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                questions = json.map(r => ({ cat: r.Kategorie || "Misc", q: r.Frage, a: parseInt(r.Antwort), type: (r.Boss || "").toLowerCase(), used: false }));
+                questions = json.map(r => ({ cat: r.Kategorie || "Allgemein", q: r.Frage, a: parseInt(r.Antwort), type: (r.Boss || "").toLowerCase(), used: false }));
                 localStorage.setItem('p0_v3', JSON.stringify(questions));
                 location.reload();
             };
@@ -184,7 +230,7 @@
             const cats = [...new Set(questions.filter(q => q.type !== 'ja' && !q.used).map(q => q.cat))];
             
             if(cats.length === 0 && questions.length > 0) {
-                endGame("MISSION COMPLETE", "Alle Sektoren gesichert!");
+                endGame("MISSION ERFOLGREICH", "Alle Sektoren wurden bereinigt.");
                 return;
             }
 
@@ -224,6 +270,7 @@
             document.getElementById('btn-next').style.display = 'none';
             document.getElementById('ans-input').value = "";
             toggleModal('modal-quiz', true);
+            setTimeout(() => document.getElementById('ans-input').focus(), 100);
         }
 
         function checkAnswer() {
@@ -239,7 +286,7 @@
                 let gain = (activeJoker === 'Schwert') ? 15 : 5;
                 hp = Math.min(100, hp + gain);
                 score += 150;
-                document.getElementById('m-feedback').innerHTML = `<span style="color:var(--green)">PERFEKT! +${gain} HP</span>`;
+                document.getElementById('m-feedback').innerHTML = `<span style="color:var(--green)">VOLLTREFFER! +${gain} HP</span>`;
             } else {
                 hp -= diff;
                 score += Math.max(0, 50 - diff);
@@ -254,14 +301,16 @@
 
         async function endGame(title, text) {
             document.getElementById('go-title').innerText = title;
-            document.getElementById('go-text').innerHTML = `${text}<br>Score: ${score}`;
+            document.getElementById('go-text').innerHTML = `${text}<br><br><b>FINAL SCORE: ${score}</b>`;
             toggleModal('modal-gameover', true);
-            if(score > 0) await supabaseClient.from('highscores').insert([{ name: pilotName, score: score }]);
+            if(score > 0) {
+                await supabaseClient.from('highscores').insert([{ name: pilotName, score: score }]);
+            }
         }
 
         function nextRound() {
             toggleModal('modal-quiz', false);
-            if(hp <= 0) endGame("MISSION FAILED", "System kritisch!"); else renderBoard();
+            if(hp <= 0) endGame("MISSION FAILED", "System kritisch beschädigt."); else renderBoard();
         }
 
         if(questions.length > 0) renderBoard();
