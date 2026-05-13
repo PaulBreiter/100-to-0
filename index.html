@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>POINT ZERO 2.2 | Global Leaderboard</title>
+    <!-- Bibliotheken -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -21,20 +22,22 @@
             background-image: radial-gradient(circle at 10% 20%, rgba(255, 0, 85, 0.05) 0%, transparent 40%);
         }
 
-        /* UI Styling */
+        /* UI Header */
         #ui-top { position: sticky; top: 0; width: 100%; max-width: 500px; padding: 20px; z-index: 1000; box-sizing: border-box; background: linear-gradient(to bottom, var(--bg) 80%, transparent); }
         .status-container { background: var(--surface); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .hp-bar-bg { height: 6px; background: #222; border-radius: 3px; margin-top: 8px; overflow: hidden; }
         #hp-bar-fill { height: 100%; background: var(--accent); width: 100%; transition: 0.5s; }
         .hp-text { font-family: 'Orbitron', sans-serif; font-size: 1.4rem; color: var(--accent); }
 
+        /* Joker */
         .joker-row { display: flex; gap: 10px; margin-top: 15px; justify-content: center; }
         .joker-box { background: #1a1c26; border: 1px solid #333; border-radius: 12px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; cursor: pointer; transition: 0.3s; }
         .joker-box.active { border-color: var(--blue); box-shadow: 0 0 15px var(--blue); transform: translateY(-3px); }
         .joker-box.used { opacity: 0.1; filter: grayscale(1); pointer-events: none; }
 
+        /* Game Grid */
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 90%; max-width: 500px; padding-bottom: 120px; }
-        .card { background: var(--surface); border-radius: 16px; padding: 25px 15px; border: 1px solid rgba(255,255,255,0.05); text-align: center; transition: 0.2s; }
+        .card { background: var(--surface); border-radius: 16px; padding: 25px 15px; border: 1px solid rgba(255,255,255,0.05); text-align: center; transition: 0.2s; cursor: pointer; }
         .card:active { transform: scale(0.95); }
         .card.used { opacity: 0.2; pointer-events: none; }
 
@@ -45,6 +48,7 @@
         
         .score-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #222; font-family: 'Orbitron'; font-size: 0.8rem; }
 
+        /* Footer */
         footer { position: fixed; bottom: 20px; width: 90%; max-width: 400px; display: flex; gap: 10px; }
         .btn-nav { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #999; font-size: 0.7rem; cursor: pointer; font-weight: 700; text-transform: uppercase; }
         
@@ -76,7 +80,7 @@
     <div id="ui-top">
         <div class="status-container">
             <div class="hp-section">
-                <div style="font-size: 0.6rem; color: #666;">HP | SCORE: <span id="current-score" style="color:var(--green)">0</span></div>
+                <div style="font-size: 0.6rem; color: #666;">LEBENSPUNKTE | SCORE: <span id="current-score" style="color:var(--green)">0</span></div>
                 <div class="hp-text"><span id="hp-val">100</span>%</div>
                 <div class="hp-bar-bg"><div id="hp-bar-fill"></div></div>
             </div>
@@ -94,7 +98,7 @@
 
     <div class="grid" id="game-grid"></div>
 
-    <!-- Modals für Quiz, Ranking, Excel -->
+    <!-- Quiz, Ranking, Anleitung & Upload -->
     <div id="modal-quiz" class="overlay"><div class="modal-2">
         <div id="m-cat-ui" style="color: var(--blue); font-size: 0.7rem; letter-spacing: 2px;">KATEGORIE</div>
         <div id="m-q" style="font-size: 1.3rem; margin: 20px 0; font-weight: 500;">Lade...</div>
@@ -119,13 +123,13 @@
 
     <footer>
         <button class="btn-nav" onclick="showRanking()">RANKING</button>
-        <button class="btn-nav" onclick="toggleModal('modal-setup', true)">UPLOAD</button>
+        <button class="btn-nav" onclick="toggleModal('modal-setup', true)">EXCEL UPLOAD</button>
     </footer>
 
     <script>
-        // --- SUPABASE SETUP (BITTE HIER AUSFÜLLEN) ---
-        const SUPABASE_URL = 'DEINE_URL'; 
-        const SUPABASE_KEY = 'DEIN_ANON_KEY';
+        // --- SUPABASE SETUP ---
+        const SUPABASE_URL = 'https://eaxuqsiwrfqshqkwtnlz.supabase.co'; 
+        const SUPABASE_KEY = 'HIER_DEINEN_LANGEN_ANON_KEY_EINFÜGEN'; 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let questions = JSON.parse(localStorage.getItem('p0_v3')) || [];
@@ -144,22 +148,22 @@
             toggleModal('modal-ranking', true);
             const { data, error } = await supabaseClient.from('highscores').select('*').order('score', { ascending: false }).limit(10);
             const list = document.getElementById('ranking-list');
-            if(error) list.innerHTML = "Fehler!";
+            if(error) list.innerHTML = "Fehler beim Laden!";
             else list.innerHTML = data.map((s, i) => `<div class="score-row"><span>${i+1}. ${s.name}</span><span style="color:var(--green)">${s.score}</span></div>`).join('');
         }
 
         function restartGame() {
-            // Fragen bleiben erhalten, Status wird zurückgesetzt
             hp = 100; score = 0; counter = 0;
             usedJokers = { Schild: false, Schwert: false, Trank: false };
             document.querySelectorAll('.joker-box').forEach(b => b.classList.remove('used', 'active'));
             toggleModal('modal-gameover', false);
-            questions.forEach(q => q.used = false); // Alle Fragen wieder freischalten
+            questions.forEach(q => q.used = false);
             renderBoard();
         }
 
         function processExcel() {
             const file = document.getElementById('excel-file').files[0];
+            if(!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
                 const data = new Uint8Array(e.target.result);
@@ -248,9 +252,8 @@
 
         async function endGame(title, text) {
             document.getElementById('go-title').innerText = title;
-            document.getElementById('go-text').innerHTML = `${text}<br><br><b>DEIN SCORE: ${score}</b>`;
+            document.getElementById('go-text').innerHTML = `${text}<br><br><b>DEIN FINALER SCORE: ${score}</b>`;
             toggleModal('modal-gameover', true);
-            // Highscore an Supabase senden
             if(score > 0) {
                 await supabaseClient.from('highscores').insert([{ name: pilotName, score: score }]);
             }
@@ -264,6 +267,8 @@
                 renderBoard();
             }
         }
+
+        if(questions.length > 0) renderBoard();
     </script>
 </body>
 </html>
