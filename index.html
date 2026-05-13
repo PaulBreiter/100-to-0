@@ -129,7 +129,7 @@
     <script>
         // --- SUPABASE SETUP ---
         const SUPABASE_URL = 'https://eaxuqsiwrfqshqkwtnlz.supabase.co'; 
-        const SUPABASE_KEY = 'HIER_DEINEN_LANGEN_ANON_KEY_EINFÜGEN'; 
+        const SUPABASE_KEY = 'sb_publishable_PViFkgap3gvsxBgG2NSAjA_Oc0eASzI'; 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let questions = JSON.parse(localStorage.getItem('p0_v3')) || [];
@@ -148,8 +148,12 @@
             toggleModal('modal-ranking', true);
             const { data, error } = await supabaseClient.from('highscores').select('*').order('score', { ascending: false }).limit(10);
             const list = document.getElementById('ranking-list');
-            if(error) list.innerHTML = "Fehler beim Laden!";
-            else list.innerHTML = data.map((s, i) => `<div class="score-row"><span>${i+1}. ${s.name}</span><span style="color:var(--green)">${s.score}</span></div>`).join('');
+            if(error) {
+                console.error(error);
+                list.innerHTML = "Fehler beim Laden!";
+            } else {
+                list.innerHTML = data.map((s, i) => `<div class="score-row"><span>${i+1}. ${s.name}</span><span style="color:var(--green)">${s.score}</span></div>`).join('');
+            }
         }
 
         function restartGame() {
@@ -182,7 +186,7 @@
             const cats = [...new Set(questions.filter(q => q.type !== 'ja' && !q.used).map(q => q.cat))];
             
             if(cats.length === 0 && questions.length > 0) {
-                endGame("MISSION COMPLETE", "Du hast alle Datenpakete gesichert!");
+                endGame("MISSION COMPLETE", "Alle Datenpakete gesichert!");
                 return;
             }
 
@@ -255,7 +259,9 @@
             document.getElementById('go-text').innerHTML = `${text}<br><br><b>DEIN FINALER SCORE: ${score}</b>`;
             toggleModal('modal-gameover', true);
             if(score > 0) {
-                await supabaseClient.from('highscores').insert([{ name: pilotName, score: score }]);
+                try {
+                    await supabaseClient.from('highscores').insert([{ name: pilotName, score: score }]);
+                } catch(e) { console.error("Highscore konnte nicht gesendet werden."); }
             }
         }
 
