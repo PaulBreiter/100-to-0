@@ -3,145 +3,372 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>POINT ZERO</title>
+    <title>POINT ZERO | Premium Quiz</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root { --bg: #05050a; --card: #111a32; --accent: #e94560; --text: #e0e0e0; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; touch-action: manipulation; }
-        
-        /* Admin Button dezent oben */
-        #admin-trigger { opacity: 0.3; font-size: 0.7rem; position: absolute; top: 5px; right: 5px; background: none; border: 1px solid #444; color: #fff; padding: 2px 5px; width: auto; }
-        #admin-panel { display: none; background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; width: 100%; box-sizing: border-box; }
+        :root {
+            --bg: #0b0e14;
+            --card: #161b28;
+            --accent: #e94560;
+            --gold: #c5a059;
+            --blue: #4facfe;
+            --text: #ffffff;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
 
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-        .shake { animation: shake 0.3s ease-in-out; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            background-image: radial-gradient(circle at top right, #1a1a2e, transparent);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
 
-        #stat-header { position: sticky; top: 10px; width: 100%; max-width: 600px; background: rgba(17, 26, 50, 0.9); padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 100; border: 1px solid #333; box-sizing: border-box; }
-        .hp-val { font-size: 1.8rem; font-weight: bold; color: var(--accent); }
+        /* Header mit Glassmorphism */
+        #stat-header {
+            position: sticky;
+            top: 15px;
+            width: 92%;
+            max-width: 500px;
+            background: rgba(22, 27, 40, 0.85);
+            backdrop-filter: blur(15px);
+            padding: 15px 20px;
+            border-radius: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+            margin-top: 10px;
+        }
 
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; max-width: 600px; margin-top: 20px; }
-        .card { background: var(--card); padding: 25px 10px; text-align: center; border-radius: 10px; border-left: 6px solid #555; transition: 0.2s; font-weight: bold; font-size: 0.9rem; }
-        .card.used { opacity: 0.1; pointer-events: none; }
+        .stat-item { text-align: center; }
+        .stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 4px; }
+        .hp-val { font-size: 1.8rem; font-weight: 800; color: var(--accent); text-shadow: 0 0 15px rgba(233, 69, 96, 0.3); }
+        #boss-timer { font-size: 1.5rem; font-weight: bold; color: var(--gold); }
 
-        #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: var(--card); padding: 30px; border-radius: 20px; text-align: center; width: 90%; max-width: 400px; border: 1px solid #444; }
+        /* Joker-Bar */
+        .joker-bar { display: flex; gap: 8px; }
+        .joker-btn {
+            background: var(--glass);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 8px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .joker-btn.active { border-color: var(--gold); background: rgba(197, 160, 89, 0.2); transform: scale(1.1); box-shadow: 0 0 15px var(--gold); }
+        .joker-btn:disabled { opacity: 0.1; filter: grayscale(1); cursor: default; }
 
-        input { background: #000; color: #fff; border: 1px solid #444; padding: 12px; font-size: 1.2rem; width: 100px; text-align: center; border-radius: 8px; margin: 10px; }
-        button { cursor: pointer; padding: 12px 20px; border: none; border-radius: 8px; background: var(--accent); color: white; font-weight: bold; width: 100%; margin-top: 10px; }
+        /* Spielfeld */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 92%;
+            max-width: 500px;
+            margin: 30px 0 100px 0;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 25px 15px;
+            text-align: center;
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-left: 5px solid var(--blue);
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .card:active { transform: scale(0.95); }
+        .card.used { opacity: 0.2; filter: grayscale(1); pointer-events: none; }
+        .card-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 5px; display: block; }
+        .card-count { font-size: 0.75rem; color: #666; }
+
+        /* Modal / Fragefenster */
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 10, 0.95);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-content {
+            background: var(--card);
+            padding: 40px 30px;
+            border-radius: 30px;
+            text-align: center;
+            width: 88%;
+            max-width: 400px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        #m-cat { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: var(--blue); margin-bottom: 15px; }
+        #m-q { font-size: 1.3rem; line-height: 1.5; margin-bottom: 30px; font-weight: 600; }
+
+        input[type="number"] {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #333;
+            color: white;
+            padding: 15px;
+            font-size: 1.8rem;
+            width: 140px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        .main-btn {
+            background: linear-gradient(135deg, var(--accent), #b32d44);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 1rem;
+            width: 100%;
+            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.3);
+            cursor: pointer;
+        }
+
+        /* Admin Footer */
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            padding: 15px;
+            text-align: center;
+            background: linear-gradient(to top, var(--bg), transparent);
+            z-index: 500;
+        }
+
+        .setup-link { color: #444; font-size: 0.7rem; text-decoration: none; border: 1px solid #222; padding: 5px 10px; border-radius: 5px; background: none; cursor: pointer; }
+
+        #admin-panel {
+            display: none;
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1f2c;
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid #333;
+            width: 80%;
+            max-width: 350px;
+            z-index: 3000;
+        }
+
+        /* Animationen */
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
     </style>
 </head>
 <body id="game-body">
 
-    <button id="admin-trigger" onclick="document.getElementById('admin-panel').style.display='block'">Setup</button>
-
-    <div id="admin-panel">
-        <h4 style="margin-top:0">Excel Import</h4>
-        <input type="file" id="excel-file" accept=".xlsx, .xls" style="width: auto; font-size: 0.8rem;">
-        <button onclick="importExcel()" style="width: auto;">Datei Laden</button>
-        <button onclick="document.getElementById('admin-panel').style.display='none'" style="background:#444; width: auto;">Schließen</button>
-    </div>
-
     <div id="stat-header">
-        <div><small>HP</small><br><span id="hp-display" class="hp-val">100</span></div>
-        <div style="text-align:center"><small>BOSS IN</small><br><span id="boss-timer">4</span></div>
-        <div id="joker-box"><button onclick="useJoker()" id="j-btn" style="width:auto; padding: 5px 10px; background:#1a1a2e; border:1px solid #444;">🛡️</button></div>
+        <div class="stat-item">
+            <div class="stat-label">Health</div>
+            <div id="hp-display" class="hp-val">100</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">Boss In</div>
+            <div id="boss-timer">4</div>
+        </div>
+        <div class="joker-bar">
+            <button class="joker-btn" id="j-Schild" onclick="toggleJoker('Schild')" title="Schild: Max. 10 Schaden">🛡️</button>
+            <button class="joker-btn" id="j-Schwert" onclick="toggleJoker('Schwert')" title="Schwert: +15 HP bei Volltreffer">⚔️</button>
+            <button class="joker-btn" id="j-Trank" onclick="toggleJoker('Trank')" title="Trank: Halbiert den Schaden">🧪</button>
+        </div>
     </div>
 
     <div class="grid" id="game-grid"></div>
 
     <div id="modal">
         <div class="modal-content">
-            <h3 id="m-cat">KATEGORIE</h3>
-            <p id="m-q"></p>
-            <input type="number" id="ans1" placeholder="?">
-            <button onclick="checkAnswer()">BESTÄTIGEN</button>
-            <div id="m-feedback" style="margin-top:15px; font-weight:bold;"></div>
-            <button id="btn-next" style="display:none; background:#2d5a27" onclick="closeModal()">WEITER</button>
+            <div id="m-cat">Kategorie</div>
+            <div id="m-q">Frage wird geladen...</div>
+            <input type="number" id="ans1" pattern="\d*" inputmode="numeric" placeholder="0">
+            <button class="main-btn" onclick="checkAnswer()">ANTWORT BESTÄTIGEN</button>
+            <div id="m-feedback" style="margin-top:20px; font-weight:600; min-height: 24px;"></div>
+            <button id="btn-next" style="display:none; background: #2d5a27; margin-top:15px;" class="main-btn" onclick="closeModal()">NÄCHSTE RUNDE</button>
         </div>
     </div>
+
+    <div id="admin-panel">
+        <h3 style="margin-top:0">Daten-Import</h3>
+        <input type="file" id="excel-file" accept=".xlsx, .xls" style="font-size: 0.8rem; margin-bottom: 15px;">
+        <button class="main-btn" onclick="importExcel()">EXCEL LADEN</button>
+        <button class="setup-link" onclick="document.getElementById('admin-panel').style.display='none'" style="width:100%; margin-top:10px;">Abbrechen</button>
+    </div>
+
+    <footer>
+        <button class="setup-link" onclick="document.getElementById('admin-panel').style.display='block'">⚙️ SPIEL-SETUP</button>
+    </footer>
 
     <script>
         let audioCtx;
         function playSound(type) {
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = type === 'hit' ? 'sawtooth' : 'sine';
-            osc.frequency.setValueAtTime(type === 'hit' ? 100 : 400, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            const g = audioCtx.createGain();
+            osc.connect(g); g.connect(audioCtx.destination);
+            
+            if(type === 'hit') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.4);
+                g.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            } else {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.2);
+                g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            }
+            osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
         }
 
-        let questions = JSON.parse(localStorage.getItem('p0_mobile')) || [];
-        let hp = 100, counter = 0, currentIdx = null, shieldActive = false;
+        let questions = JSON.parse(localStorage.getItem('p0_v5_premium')) || [];
+        let hp = 100, counter = 0, currentIdx = null;
+        let activeJoker = null;
+        let usedJokers = { Schild: false, Schwert: false, Trank: false };
 
         function importExcel() {
             const file = document.getElementById('excel-file').files[0];
+            if(!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
                 const data = new Uint8Array(e.target.result);
                 const wb = XLSX.read(data, {type: 'array'});
                 const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                questions = json.map(r => ({ cat: r.Kategorie || "Allgemein", q: r.Frage, a: parseInt(r.Antwort), type: (r.Boss || "").toLowerCase(), used: false }));
-                localStorage.setItem('p0_mobile', JSON.stringify(questions));
-                alert("Geladen!"); location.reload();
+                questions = json.map(r => ({
+                    cat: r.Kategorie || "Allgemein",
+                    q: r.Frage, a: parseInt(r.Antwort),
+                    type: (r.Boss || "").toLowerCase(), used: false
+                }));
+                localStorage.setItem('p0_v5_premium', JSON.stringify(questions));
+                location.reload();
             };
             reader.readAsArrayBuffer(file);
         }
 
+        const catColors = {
+            "Flora + Fauna": "#6b8e23", "Medizin": "#4682b4", "Technik": "#708090",
+            "Geschichte": "#bc8f8f", "Sport": "#a0522d", "default": "#4facfe"
+        };
+
         function renderBoard() {
             const grid = document.getElementById('game-grid');
             grid.innerHTML = "";
-            if(questions.length === 0) { grid.innerHTML = "<p style='grid-column: 1/3; text-align:center;'>Bitte Excel über 'Setup' laden!</p>"; return; }
-            
-            const cats = [...new Set(questions.filter(q => q.type !== 'ja' && q.type !== 'endboss').map(q => q.cat))];
+            if(questions.length === 0) {
+                grid.innerHTML = "<div style='grid-column:1/3; text-align:center; padding:40px; color:#555;'>Keine Fragen geladen.<br>Nutze das Setup unten.</div>";
+                return;
+            }
+
+            const normalQs = questions.filter(q => q.type !== 'ja' && q.type !== 'endboss');
+            const cats = [...new Set(normalQs.map(q => q.cat))];
+
             cats.forEach(cat => {
-                const open = questions.filter(q => q.cat === cat && !q.used && q.type !== 'ja');
+                const open = normalQs.filter(q => q.cat === cat && !q.used);
                 const card = document.createElement('div');
                 card.className = `card ${open.length === 0 ? 'used' : ''}`;
-                card.innerHTML = `${cat}<br><small>${open.length} übrig</small>`;
+                card.style.borderLeftColor = catColors[cat] || catColors.default;
+                card.innerHTML = `<span class="card-title" style="color:${catColors[cat] || '#fff'}">${cat}</span>
+                                  <span class="card-count">${open.length} Fragen</span>`;
+                
                 if(open.length > 0) card.onclick = () => {
-                    const pool = open;
-                    const q = pool[Math.floor(Math.random()*pool.length)];
+                    const q = open[Math.floor(Math.random()*open.length)];
                     currentIdx = questions.indexOf(q);
                     openQuestion(q);
                 };
                 grid.appendChild(card);
             });
             document.getElementById('hp-display').innerText = hp;
-            document.getElementById('boss-timer').innerText = (4 - counter);
+            document.getElementById('boss-timer').innerText = (4 - (counter % 4));
+        }
+
+        function toggleJoker(type) {
+            if(usedJokers[type]) return;
+            activeJoker = (activeJoker === type) ? null : type;
+            document.querySelectorAll('.joker-btn').forEach(b => b.classList.remove('active'));
+            if(activeJoker) document.getElementById('j-'+type).classList.add('active');
         }
 
         function openQuestion(q) {
             document.getElementById('m-cat').innerText = q.cat;
+            document.getElementById('m-cat').style.color = catColors[q.cat] || catColors.default;
             document.getElementById('m-q').innerText = q.q;
             document.getElementById('modal').style.display = 'flex';
-            document.getElementById('btn-next').style.display = 'none';
             document.getElementById('m-feedback').innerText = "";
+            document.getElementById('btn-next').style.display = 'none';
             document.getElementById('ans1').value = "";
+            document.getElementById('ans1').focus();
         }
 
         function checkAnswer() {
             const q = questions[currentIdx];
-            const val = parseInt(document.getElementById('ans1').value);
-            let diff = Math.abs(val - q.a);
-            if(shieldActive && diff > 10) { diff = 10; shieldActive = false; document.getElementById('j-btn').style.borderColor = "#444"; }
+            const guess = parseInt(document.getElementById('ans1').value);
+            if(isNaN(guess)) return;
 
-            if(diff === 0) { playSound('win'); hp += 5; } 
-            else { 
-                playSound('hit'); hp -= diff; 
+            let diff = Math.abs(guess - q.a);
+            let feedback = "";
+
+            // Joker Logik
+            if(activeJoker === 'Schild' && diff > 10) diff = 10;
+            if(activeJoker === 'Trank') diff = Math.round(diff / 2);
+            
+            if(diff === 0) {
+                playSound('win');
+                let gain = (activeJoker === 'Schwert') ? 15 : 5;
+                hp += gain;
+                feedback = `<span style="color:#ffd700">VOLTREFFER! +${gain} HP</span>`;
+            } else {
+                playSound('hit');
+                hp -= diff;
                 document.getElementById('game-body').classList.add('shake');
-                setTimeout(() => document.getElementById('game-body').classList.remove('shake'), 300);
+                setTimeout(() => document.getElementById('game-body').classList.remove('shake'), 400);
+                feedback = `<span style="color:#ff4b2b">Lösung: ${q.a} (-${diff})</span>`;
             }
-            q.used = true; counter++;
-            document.getElementById('m-feedback').innerText = `Lösung: ${q.a} (${diff === 0 ? '+5 HP' : '-' + diff + ' HP'})`;
+
+            if(activeJoker) {
+                usedJokers[activeJoker] = true;
+                document.getElementById('j-'+activeJoker).disabled = true;
+                document.getElementById('j-'+activeJoker).classList.remove('active');
+                activeJoker = null;
+            }
+
+            q.used = true;
+            counter++;
+            document.getElementById('m-feedback').innerHTML = feedback;
             document.getElementById('btn-next').style.display = 'block';
             document.getElementById('hp-display').innerText = hp;
+            localStorage.setItem('p0_v5_premium', JSON.stringify(questions));
         }
 
-        function useJoker() { shieldActive = true; document.getElementById('j-btn').style.borderColor = "gold"; }
-        function closeModal() { document.getElementById('modal').style.display = 'none'; renderBoard(); }
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            if(hp <= 0) {
+                alert("GAME OVER! Deine Reise endet hier.");
+                localStorage.removeItem('p0_v5_premium');
+                location.reload();
+            }
+            renderBoard();
+        }
 
         renderBoard();
     </script>
