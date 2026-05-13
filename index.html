@@ -3,139 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>POINT ZERO 2.0</title>
+    <title>POINT ZERO 2.2 | Global Leaderboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap');
 
         :root {
-            --bg: #030305;
-            --surface: #0f111a;
-            --accent: #ff0055;
-            --accent-glow: rgba(255, 0, 85, 0.5);
-            --gold: #ffcc00;
-            --blue: #00d4ff;
-            --green: #00ff88;
-            --text: #e0e0e5;
+            --bg: #030305; --surface: #0f111a; --accent: #ff0055;
+            --gold: #ffcc00; --blue: #00d4ff; --green: #00ff88; --text: #e0e0e5;
         }
 
         body {
-            font-family: 'Rajdhani', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            margin: 0; padding: 0;
-            display: flex; flex-direction: column; align-items: center;
+            font-family: 'Rajdhani', sans-serif; background: var(--bg); color: var(--text);
+            margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center;
             min-height: 100vh; overflow-x: hidden;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(255, 0, 85, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(0, 212, 255, 0.05) 0%, transparent 40%);
+            background-image: radial-gradient(circle at 10% 20%, rgba(255, 0, 85, 0.05) 0%, transparent 40%);
         }
 
-        /* --- UI HEADER --- */
-        #ui-top {
-            position: sticky; top: 0; width: 100%; max-width: 500px;
-            padding: 20px; z-index: 1000; box-sizing: border-box;
-            background: linear-gradient(to bottom, var(--bg) 60%, transparent);
-        }
-
-        .status-container {
-            background: var(--surface);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 20px; padding: 15px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-        }
-
-        .hp-section { flex: 1; }
+        /* UI Styling */
+        #ui-top { position: sticky; top: 0; width: 100%; max-width: 500px; padding: 20px; z-index: 1000; box-sizing: border-box; background: linear-gradient(to bottom, var(--bg) 80%, transparent); }
+        .status-container { background: var(--surface); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .hp-bar-bg { height: 6px; background: #222; border-radius: 3px; margin-top: 8px; overflow: hidden; }
-        #hp-bar-fill { height: 100%; background: var(--accent); width: 100%; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 0 10px var(--accent); }
-        .hp-text { font-family: 'Orbitron', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+        #hp-bar-fill { height: 100%; background: var(--accent); width: 100%; transition: 0.5s; }
+        .hp-text { font-family: 'Orbitron', sans-serif; font-size: 1.4rem; color: var(--accent); }
 
-        .boss-section { text-align: center; margin: 0 15px; }
-        #boss-circle { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: var(--gold); border: 2px solid var(--gold); width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: 0 0 10px rgba(255, 204, 0, 0.3); }
-
-        /* --- JOKER GRID --- */
         .joker-row { display: flex; gap: 10px; margin-top: 15px; justify-content: center; }
-        .joker-box {
-            background: #1a1c26; border: 1px solid #333; border-radius: 12px;
-            width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;
-            font-size: 1.3rem; cursor: pointer; transition: 0.3s;
-        }
-        .joker-box.active { border-color: var(--blue); box-shadow: 0 0 15px var(--blue); transform: translateY(-3px); background: rgba(0, 212, 255, 0.1); }
+        .joker-box { background: #1a1c26; border: 1px solid #333; border-radius: 12px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; cursor: pointer; transition: 0.3s; }
+        .joker-box.active { border-color: var(--blue); box-shadow: 0 0 15px var(--blue); transform: translateY(-3px); }
         .joker-box.used { opacity: 0.1; filter: grayscale(1); pointer-events: none; }
 
-        /* --- GAME GRID --- */
-        .grid {
-            display: grid; grid-template-columns: repeat(2, 1fr);
-            gap: 15px; width: 90%; max-width: 500px; padding-bottom: 120px;
-        }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 90%; max-width: 500px; padding-bottom: 120px; }
+        .card { background: var(--surface); border-radius: 16px; padding: 25px 15px; border: 1px solid rgba(255,255,255,0.05); text-align: center; transition: 0.2s; }
+        .card:active { transform: scale(0.95); }
+        .card.used { opacity: 0.2; pointer-events: none; }
 
-        .card {
-            background: var(--surface); border-radius: 16px; padding: 25px 15px;
-            position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);
-            transition: 0.3s; text-align: center;
-        }
-        .card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--blue); }
-        .card:active { transform: scale(0.95); background: #1c1f2b; }
-        .card.used { opacity: 0.2; transform: scale(0.9); pointer-events: none; }
-        .card-cat { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: #888; display: block; margin-bottom: 5px; }
-        .card-name { font-size: 1.1rem; font-weight: 700; color: #fff; }
-
-        /* --- MODALS --- */
-        .overlay {
-            display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.95); backdrop-filter: blur(10px);
-            z-index: 2000; justify-content: center; align-items: center;
-        }
-        .modal-2 {
-            background: var(--surface); width: 85%; max-width: 400px;
-            padding: 35px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1);
-            text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,1);
-        }
-        #m-q { font-size: 1.4rem; font-weight: 500; line-height: 1.4; margin: 20px 0; min-height: 80px; }
+        /* Modals */
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-2 { background: var(--surface); width: 85%; max-width: 400px; padding: 35px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
+        .btn-confirm { background: var(--accent); color: #fff; border: none; width: 100%; padding: 18px; border-radius: 15px; font-weight: 700; margin-top: 15px; cursor: pointer; font-family: 'Orbitron'; }
         
-        input[type="number"] {
-            background: #000; border: 2px solid #333; color: var(--blue);
-            width: 140px; padding: 15px; border-radius: 15px;
-            font-family: 'Orbitron', sans-serif; font-size: 2rem; outline: none;
-            transition: 0.3s;
-        }
-        input:focus { border-color: var(--blue); box-shadow: 0 0 15px rgba(0, 212, 255, 0.2); }
+        .score-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #222; font-family: 'Orbitron'; font-size: 0.8rem; }
 
-        .btn-confirm {
-            background: var(--accent); color: #fff; border: none;
-            width: 100%; padding: 18px; border-radius: 15px;
-            font-weight: 700; font-size: 1.1rem; margin-top: 25px;
-            text-transform: uppercase; letter-spacing: 1px;
-        }
-
-        /* --- FOOTER NAV --- */
-        footer {
-            position: fixed; bottom: 20px; width: 90%; max-width: 400px;
-            display: flex; gap: 10px; z-index: 1000;
-        }
-        .btn-nav {
-            flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-            padding: 12px; border-radius: 12px; color: #999; font-size: 0.8rem; cursor: pointer;
-            backdrop-filter: blur(10px); font-weight: 700; text-transform: uppercase;
-        }
-
-        @keyframes damage { 0% { transform: translate(2px, 1px) rotate(0deg); } 20% { transform: translate(-3px, -1px) rotate(-1deg); } 100% { transform: translate(0,0); } }
-        .dmg-shake { animation: damage 0.1s linear infinite; animation-iteration-count: 4; }
+        footer { position: fixed; bottom: 20px; width: 90%; max-width: 400px; display: flex; gap: 10px; }
+        .btn-nav { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #999; font-size: 0.7rem; cursor: pointer; font-weight: 700; text-transform: uppercase; }
+        
+        input { background: #000; border: 2px solid #333; color: var(--blue); padding: 15px; border-radius: 12px; width: 85%; text-align: center; font-family: 'Orbitron'; font-size: 1.2rem; outline: none; }
     </style>
 </head>
 <body id="main">
 
+    <!-- LOGIN MODAL -->
+    <div id="modal-login" class="overlay" style="display: flex;">
+        <div class="modal-2">
+            <h2 style="color: var(--blue); font-family: 'Orbitron';">IDENTITY CHECK</h2>
+            <p style="color:#666; font-size: 0.8rem;">Gib deinen Namen für das Ranking ein</p>
+            <input type="text" id="username" placeholder="PILOT">
+            <button class="btn-confirm" onclick="initSession()">SYSTEM START</button>
+        </div>
+    </div>
+
+    <!-- GAME OVER / RESTART MODAL -->
+    <div id="modal-gameover" class="overlay">
+        <div class="modal-2">
+            <h2 id="go-title" style="color: var(--accent); font-family: 'Orbitron';">MISSION FAILED</h2>
+            <p id="go-text" style="margin: 20px 0; line-height: 1.6;"></p>
+            <button class="btn-confirm" style="background: var(--green); color: #000;" onclick="restartGame()">RETRY (GLEICHE FRAGEN)</button>
+            <button class="btn-nav" style="width: 100%; margin-top: 10px;" onclick="location.reload()">HAUPTMENÜ</button>
+        </div>
+    </div>
+
     <div id="ui-top">
         <div class="status-container">
             <div class="hp-section">
-                <div class="stat-label" style="font-size: 0.7rem; color: #666;">LEBENSPUNKTE</div>
+                <div style="font-size: 0.6rem; color: #666;">HP | SCORE: <span id="current-score" style="color:var(--green)">0</span></div>
                 <div class="hp-text"><span id="hp-val">100</span>%</div>
                 <div class="hp-bar-bg"><div id="hp-bar-fill"></div></div>
             </div>
-            <div class="boss-section">
-                <div class="stat-label" style="font-size: 0.7rem; color: #666; margin-bottom: 5px;">BOSS</div>
-                <div id="boss-circle">4</div>
+            <div style="text-align: center; margin-left: 15px;">
+                <div style="font-size: 0.6rem; color: #666;">BOSS</div>
+                <div id="boss-circle" style="border: 2px solid var(--gold); border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; color: var(--gold); font-family: 'Orbitron';">4</div>
             </div>
         </div>
         <div class="joker-row">
@@ -147,67 +94,79 @@
 
     <div class="grid" id="game-grid"></div>
 
-    <!-- Quiz Modal -->
-    <div id="modal-quiz" class="overlay">
-        <div class="modal-2">
-            <div id="m-cat-ui" style="color: var(--blue); font-size: 0.8rem; letter-spacing: 3px;">KATEGORIE</div>
-            <div id="j-active-indicator" style="height: 20px; font-size: 0.8rem; color: var(--gold); margin-top: 10px;"></div>
-            <div id="m-q">Frage lädt...</div>
-            <input type="number" id="ans-input" inputmode="numeric" placeholder="00">
-            <button class="btn-confirm" onclick="checkAnswer()">ANTWORT BESTÄTIGEN</button>
-            <div id="m-feedback" style="margin-top: 20px; font-weight: bold; font-size: 1.2rem;"></div>
-            <button id="btn-next" style="display:none; background: var(--green); color: #000;" class="btn-confirm" onclick="nextRound()">WEITER</button>
-        </div>
-    </div>
+    <!-- Modals für Quiz, Ranking, Excel -->
+    <div id="modal-quiz" class="overlay"><div class="modal-2">
+        <div id="m-cat-ui" style="color: var(--blue); font-size: 0.7rem; letter-spacing: 2px;">KATEGORIE</div>
+        <div id="m-q" style="font-size: 1.3rem; margin: 20px 0; font-weight: 500;">Lade...</div>
+        <input type="number" id="ans-input" inputmode="numeric">
+        <button class="btn-confirm" onclick="checkAnswer()">DATEN SENDEN</button>
+        <div id="m-feedback" style="margin-top: 15px; font-weight: 700;"></div>
+        <button id="btn-next" style="display:none; background: var(--green); color: #000;" class="btn-confirm" onclick="nextRound()">WEITER</button>
+    </div></div>
 
-    <!-- Info Modal -->
-    <div id="modal-info" class="overlay">
-        <div class="modal-2" style="text-align: left;">
-            <h2 style="color: var(--blue); font-family: 'Orbitron';">ANLEITUNG</h2>
-            <div style="font-size: 0.9rem; color: #aaa; line-height: 1.6;">
-                <p><b style="color:var(--accent)">🛡️ SCHILD:</b> Max. 10 Schaden für diese Runde.</p>
-                <p><b style="color:var(--green)">⚔️ SCHWERT:</b> Volltreffer gewährt +15 HP Heilung.</p>
-                <p><b style="color:var(--gold)">🧪 TRANK:</b> Halbiert den eingehenden Schaden.</p>
-                <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
-                <p>Gib deine Schätzung ein. Die Differenz zur echten Antwort wird von deinen Lebenspunkten abgezogen.</p>
-            </div>
-            <button class="btn-confirm" onclick="toggleModal('modal-info', false)">SCHLIESSEN</button>
-        </div>
-    </div>
+    <div id="modal-ranking" class="overlay"><div class="modal-2">
+        <h2 style="color: var(--gold); font-family: 'Orbitron';">TOP PILOTEN</h2>
+        <div id="ranking-list" style="margin-top: 20px; max-height: 250px; overflow-y: auto;">Lade...</div>
+        <button class="btn-confirm" onclick="toggleModal('modal-ranking', false)">ZURÜCK</button>
+    </div></div>
 
-    <!-- Setup Modal -->
-    <div id="modal-setup" class="overlay">
-        <div class="modal-2">
-            <h2 style="color: var(--blue);">EXCEL UPLOAD</h2>
-            <p style="font-size: 0.8rem; color: #666;">Wähle deine Quiz-Datei aus (.xlsx)</p>
-            <input type="file" id="excel-file" accept=".xlsx, .xls" style="font-size: 0.8rem; margin: 20px 0;">
-            <button class="btn-confirm" onclick="processExcel()">DATEI LADEN</button>
-            <button class="btn-nav" style="width: 100%; margin-top: 10px;" onclick="toggleModal('modal-setup', false)">ABBRECHEN</button>
-        </div>
-    </div>
+    <div id="modal-setup" class="overlay"><div class="modal-2">
+        <h2 style="color: var(--blue);">EXCEL UPLOAD</h2>
+        <input type="file" id="excel-file" accept=".xlsx, .xls">
+        <button class="btn-confirm" onclick="processExcel()">INITIALIZE</button>
+        <button class="btn-nav" style="width:100%; margin-top:10px;" onclick="toggleModal('modal-setup', false)">ABBRECHEN</button>
+    </div></div>
 
     <footer>
-        <button class="btn-nav" onclick="toggleModal('modal-info', true)">ANLEITUNG</button>
-        <button class="btn-nav" onclick="toggleModal('modal-setup', true)">EXCEL UPLOAD</button>
+        <button class="btn-nav" onclick="showRanking()">RANKING</button>
+        <button class="btn-nav" onclick="toggleModal('modal-setup', true)">UPLOAD</button>
     </footer>
 
     <script>
-        let questions = JSON.parse(localStorage.getItem('p0_v2')) || [];
-        let hp = 100, counter = 0, currentIdx = null, activeJoker = null;
+        // --- SUPABASE SETUP (BITTE HIER AUSFÜLLEN) ---
+        const SUPABASE_URL = 'DEINE_URL'; 
+        const SUPABASE_KEY = 'DEIN_ANON_KEY';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let questions = JSON.parse(localStorage.getItem('p0_v3')) || [];
+        let hp = 100, score = 0, counter = 0, currentIdx = null, activeJoker = null, pilotName = "";
         let usedJokers = { Schild: false, Schwert: false, Trank: false };
 
         function toggleModal(id, show) { document.getElementById(id).style.display = show ? 'flex' : 'none'; }
 
+        function initSession() {
+            pilotName = document.getElementById('username').value.trim() || "Pilot X";
+            toggleModal('modal-login', false);
+            renderBoard();
+        }
+
+        async function showRanking() {
+            toggleModal('modal-ranking', true);
+            const { data, error } = await supabaseClient.from('highscores').select('*').order('score', { ascending: false }).limit(10);
+            const list = document.getElementById('ranking-list');
+            if(error) list.innerHTML = "Fehler!";
+            else list.innerHTML = data.map((s, i) => `<div class="score-row"><span>${i+1}. ${s.name}</span><span style="color:var(--green)">${s.score}</span></div>`).join('');
+        }
+
+        function restartGame() {
+            // Fragen bleiben erhalten, Status wird zurückgesetzt
+            hp = 100; score = 0; counter = 0;
+            usedJokers = { Schild: false, Schwert: false, Trank: false };
+            document.querySelectorAll('.joker-box').forEach(b => b.classList.remove('used', 'active'));
+            toggleModal('modal-gameover', false);
+            questions.forEach(q => q.used = false); // Alle Fragen wieder freischalten
+            renderBoard();
+        }
+
         function processExcel() {
             const file = document.getElementById('excel-file').files[0];
-            if(!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
                 const data = new Uint8Array(e.target.result);
                 const wb = XLSX.read(data, {type: 'array'});
                 const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
                 questions = json.map(r => ({ cat: r.Kategorie || "Misc", q: r.Frage, a: parseInt(r.Antwort), type: (r.Boss || "").toLowerCase(), used: false }));
-                localStorage.setItem('p0_v2', JSON.stringify(questions));
+                localStorage.setItem('p0_v3', JSON.stringify(questions));
                 location.reload();
             };
             reader.readAsArrayBuffer(file);
@@ -216,20 +175,20 @@
         function renderBoard() {
             const grid = document.getElementById('game-grid');
             grid.innerHTML = "";
-            if(questions.length === 0) {
-                grid.innerHTML = "<div style='grid-column:1/3; text-align:center; padding:40px; color:#444;'>Bitte lade eine Excel-Datei über den Upload-Button hoch.</div>";
+            const cats = [...new Set(questions.filter(q => q.type !== 'ja' && !q.used).map(q => q.cat))];
+            
+            if(cats.length === 0 && questions.length > 0) {
+                endGame("MISSION COMPLETE", "Du hast alle Datenpakete gesichert!");
                 return;
             }
-            const normalQs = questions.filter(q => q.type !== 'ja' && q.type !== 'endboss');
-            const cats = [...new Set(normalQs.map(q => q.cat))];
 
             cats.forEach(cat => {
-                const open = normalQs.filter(q => q.cat === cat && !q.used);
                 const card = document.createElement('div');
-                card.className = `card ${open.length === 0 ? 'used' : ''}`;
-                card.innerHTML = `<span class="card-cat">${cat}</span><span class="card-name">FRAGENPAKET</span><br><small style="color:#555">${open.length} ÜBRIG</small>`;
-                if(open.length > 0) card.onclick = () => {
-                    currentIdx = questions.indexOf(open[Math.floor(Math.random()*open.length)]);
+                card.className = "card";
+                card.innerHTML = `<div style="font-size:0.6rem; color:#666; letter-spacing:1px;">${cat}</div><div style="font-weight:700; margin-top:5px;">DATA SECTOR</div>`;
+                card.onclick = () => {
+                    const pool = questions.filter(q => q.cat === cat && !q.used);
+                    currentIdx = questions.indexOf(pool[Math.floor(Math.random()*pool.length)]);
                     openQuestion(questions[currentIdx]);
                 };
                 grid.appendChild(card);
@@ -240,8 +199,9 @@
         function updateUI() {
             document.getElementById('hp-val').innerText = hp;
             document.getElementById('hp-bar-fill').style.width = Math.max(0, hp) + "%";
+            document.getElementById('current-score').innerText = score;
             document.getElementById('boss-circle').innerText = (4 - (counter % 4));
-            if(hp <= 30) document.getElementById('hp-bar-fill').style.background = "var(--accent)";
+            document.getElementById('hp-bar-fill').style.background = hp <= 30 ? "var(--accent)" : "var(--green)";
         }
 
         function useJoker(type) {
@@ -254,7 +214,6 @@
         function openQuestion(q) {
             document.getElementById('m-cat-ui').innerText = q.cat;
             document.getElementById('m-q').innerText = q.q;
-            document.getElementById('j-active-indicator').innerText = activeJoker ? "⚡ AKTIV: " + activeJoker.toUpperCase() : "";
             document.getElementById('m-feedback').innerText = "";
             document.getElementById('btn-next').style.display = 'none';
             document.getElementById('ans-input').value = "";
@@ -273,32 +232,38 @@
             if(diff === 0) {
                 let gain = (activeJoker === 'Schwert') ? 15 : 5;
                 hp = Math.min(100, hp + gain);
-                document.getElementById('m-feedback').innerHTML = `<span style="color:var(--green)">VOLTREFFER! +${gain} HP</span>`;
+                score += 150;
+                document.getElementById('m-feedback').innerHTML = `<span style="color:var(--green)">PERFECT! +${gain}HP / +150 PTS</span>`;
             } else {
                 hp -= diff;
-                document.getElementById('main').classList.add('dmg-shake');
-                setTimeout(() => document.getElementById('main').classList.remove('dmg-shake'), 400);
-                document.getElementById('m-feedback').innerHTML = `<span style="color:var(--accent)">- ${diff} LEBEN (Lösung: ${q.a})</span>`;
+                score += Math.max(0, 50 - diff);
+                document.getElementById('m-feedback').innerHTML = `<span style="color:var(--accent)">-${diff} HP (ANTWORT: ${q.a})</span>`;
             }
 
-            if(activeJoker) {
-                usedJokers[activeJoker] = true;
-                document.getElementById('j-'+activeJoker).classList.add('used');
-                activeJoker = null;
-            }
+            if(activeJoker) { usedJokers[activeJoker] = true; document.getElementById('j-'+activeJoker).classList.add('used'); activeJoker = null; }
             q.used = true; counter++;
             document.getElementById('btn-next').style.display = 'block';
             updateUI();
-            localStorage.setItem('p0_v2', JSON.stringify(questions));
+        }
+
+        async function endGame(title, text) {
+            document.getElementById('go-title').innerText = title;
+            document.getElementById('go-text').innerHTML = `${text}<br><br><b>DEIN SCORE: ${score}</b>`;
+            toggleModal('modal-gameover', true);
+            // Highscore an Supabase senden
+            if(score > 0) {
+                await supabaseClient.from('highscores').insert([{ name: pilotName, score: score }]);
+            }
         }
 
         function nextRound() {
             toggleModal('modal-quiz', false);
-            if(hp <= 0) { alert("GAME OVER! Deine Lebenspunkte sind auf 0."); localStorage.removeItem('p0_v2'); location.reload(); }
-            renderBoard();
+            if(hp <= 0) {
+                endGame("MISSION FAILED", "Systemstabilität kritisch. Verbindung unterbrochen.");
+            } else {
+                renderBoard();
+            }
         }
-
-        renderBoard();
     </script>
 </body>
 </html>
